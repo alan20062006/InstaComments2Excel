@@ -1,0 +1,24 @@
+1594822189032	mozrunner::runner	INFO	Running command: "/usr/bin/firefox" "-marionette" "-foreground" "-no-remote" "-profile" "/tmp/rust_mozprofilecWgNC7"
+1594822190904	Marionette	INFO	Listening on port 39731
+1594822190948	Marionette	WARN	TLS certificate errors will be ignored for this session
+1594822215551	Marionette	INFO	Stopped listening on port 39731
+1594822554087	mozrunner::runner	INFO	Running command: "/usr/bin/firefox" "-marionette" "-foreground" "-no-remote" "-profile" "/tmp/rust_mozprofileVWSjpw"
+1594822556112	Marionette	INFO	Listening on port 38241
+1594822556249	Marionette	WARN	TLS certificate errors will be ignored for this session
+1594822590265	Marionette	INFO	Stopped listening on port 38241
+1594822742952	mozrunner::runner	INFO	Running command: "/usr/bin/firefox" "-marionette" "-foreground" "-no-remote" "-profile" "/tmp/rust_mozprofileDU7UR7"
+1594822744784	Marionette	INFO	Listening on port 43021
+1594822744911	Marionette	WARN	TLS certificate errors will be ignored for this session
+1594822778564	Marionette	INFO	Stopped listening on port 43021
+1594822867593	mozrunner::runner	INFO	Running command: "/usr/bin/firefox" "-marionette" "-foreground" "-no-remote" "-profile" "/tmp/rust_mozprofileK3Itr8"
+1594822869423	Marionette	INFO	Listening on port 35629
+1594822869504	Marionette	WARN	TLS certificate errors will be ignored for this session
+1594822905127	Marionette	INFO	Stopped listening on port 35629
+1594823058361	mozrunner::runner	INFO	Running command: "/usr/bin/firefox" "-marionette" "-foreground" "-no-remote" "-profile" "/tmp/rust_mozprofileHfc7i0"
+1594823060226	Marionette	INFO	Listening on port 40273
+1594823060329	Marionette	WARN	TLS certificate errors will be ignored for this session
+1594823094115	Marionette	INFO	Stopped listening on port 40273
+1594823420565	mozrunner::runner	INFO	Running command: "/usr/bin/firefox" "-marionette" "-foreground" "-no-remote" "-profile" "/tmp/rust_mozprofileN5EJvo"
+1594823422399	Marionette	INFO	Listening on port 41573
+1594823422470	Marionette	WARN	TLS certificate errors will be ignored for this session
+1594823458736	Marionette	INFO	Stopped listening on port 41573
