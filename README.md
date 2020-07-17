@@ -17,7 +17,7 @@ Extract all comments from your desired Instagram post into an excel sheet
 ## Installation
 1. Clone:
 
-   `git clone https://github.com/jayveedee/Instagram-Comments-Scraper.git`
+   `git clone https://github.com/jayveedee/InstaComments2Excel.git`
    
     
 2. Create Virtual Environment (Recommended)<br/> 
