@@ -1,6 +1,6 @@
 # Instagram Comments Scraper (fork)
 
-A Instagram comment scraper. Get all the comments pasted into an excel sheet from your desired Instagram post.
+Extract all comments from your desired Instagram post into an excel sheet
 
 ## Changes from original
 - No longer a need to specify how often to load any given post. It will now instead load all comments in the post
@@ -10,7 +10,7 @@ A Instagram comment scraper. Get all the comments pasted into an excel sheet fro
   - Number of replies
   - Comment type (reply or main comment)
   - Comment ID (evry main comment has a unique ID, but replies have the same as the main comment)
-- The program runs headless now instead with head to reduce load times.
+- The program runs headless now to reduce some minor load times
 - Lastly, the code structure has been changed. Some printouts have changed as well.
 
 
