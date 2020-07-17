@@ -38,10 +38,8 @@ def close_sign_in_popup(driver):
     try:
         close_button = driver.find_element_by_class_name('xqRnw')
         close_button.click()
-        return True
     except Exception as e:
         print(e)
-        return False
 
 
 def load_all_comments(driver):
