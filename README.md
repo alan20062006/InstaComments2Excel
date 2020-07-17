@@ -9,7 +9,7 @@ Extract all comments from your desired Instagram post into an excel sheet
   - Number of likes
   - Number of replies
   - Comment type (reply or main comment)
-  - Comment ID (evry main comment has a unique ID, but replies have the same as the main comment)
+  - Comment ID (every main comment has a unique ID, but replies have the same as the main comment)
 - The program runs headless now to reduce some minor load times
 - Lastly, the code structure has been changed. Some printouts have changed as well.
 
