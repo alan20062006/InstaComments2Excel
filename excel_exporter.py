@@ -35,4 +35,4 @@ def export(ids, types, names, comments, likes, replies):
     writer = ExcelWriter(fname)
     df.to_excel(writer, 'ridwan kamil', index=False)
     writer.save()
-    print(f"Saving Excel sheet to: {os.getcwd()}/{fname}")
+    print(f"Saving extracted data to: {os.getcwd()}/{fname}")
