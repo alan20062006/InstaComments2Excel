@@ -13,6 +13,10 @@ Extract all comments from your desired Instagram post into an excel sheet
 - The program runs headless now to reduce some minor load times
 - Lastly, the code structure has been changed. Some printouts have changed as well.
 
+## Known issues
+- When trying to scrape an Instagram post that is a video, main comments do not load
+  - (possible fix) Change name of the button class to match the one on the video post. (this will however reverse the problem and make it so that picture posts   will not load anymore)
+
 
 ## Installation
 1. Clone:
