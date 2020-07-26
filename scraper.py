@@ -15,23 +15,26 @@ TOTAL_C = 0
 TOTAL_MAIN_C = 0
 TOTAL_REPLY_C = 0
 
+URL = sys.argv[1]
+DRIVER = None
+
 
 def start():
-    driver = initialize_driver(sys.argv[1])
-    close_sign_in_popup(driver)
-    load_all_comments(driver)
-    comment_iterator(driver)
+    initialize_driver(URL)
+    close_sign_in_popup(DRIVER)
+    load_all_comments(DRIVER)
+    comment_iterator(DRIVER)
     excel_exporter.export(c_ids, c_types, c_names, c_comments, c_likes, c_replies)
-    driver.close()
+    DRIVER.close()
 
 
 def initialize_driver(url):
+    global DRIVER
     options = Options()
     options.headless = True
-    driver = webdriver.Firefox(options=options)
-    driver.get(url)
+    DRIVER = webdriver.Firefox(options=options)
+    DRIVER.get(url)
     time.sleep(1)
-    return driver
 
 
 def close_sign_in_popup(driver):
