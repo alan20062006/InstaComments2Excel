@@ -59,6 +59,8 @@ Extract all comments from your desired Instagram post into an excel sheet and gr
       The first row **must** be the name of said category, the rest of words per column can be whatever 
       you want
       
+      All the generated files will be saved in the project directory `src/data`
+      
 7. Deactivate the virtual environment
     - `deactivate`
 
