@@ -2,3 +2,4 @@ selenium
 pandas
 xlrd
 openpyxl
+numpy

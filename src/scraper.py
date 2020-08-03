@@ -2,7 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 import time
 import sys
-import excel_exporter
+import exporter
 
 c_ids = []
 c_types = []
@@ -24,7 +24,7 @@ def start():
     close_sign_in_popup(DRIVER)
     load_all_comments(DRIVER)
     comment_iterator(DRIVER)
-    excel_exporter.export(c_ids, c_types, c_names, c_comments, c_likes, c_replies)
+    exporter.export(c_ids, c_types, c_names, c_comments, c_likes, c_replies)
     DRIVER.close()
 
 
