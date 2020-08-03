@@ -57,7 +57,7 @@ Extract all comments from your desired Instagram post into an excel sheet and gr
       where every row is a category with the defining words or sentences in each subsequent cell. 
       Save this file to the directory `src/data/groupings.xlsx`. 
       The first row **must** be the name of said category, the rest of words per column can be whatever 
-      you want
+      you want. See the groupings example file in `src/data`
       
       All the generated files will be saved in the project directory `src/data`
       
