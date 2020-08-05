@@ -14,6 +14,8 @@ Extract all comments from your desired Instagram post into an excel sheet and gr
 - It is now possible to group comments into categories using the `grouper.py` program
   - `grouper.py` requires an extra file called `groupings.xlsx` which defines the categories to group the comments by. 
   This file is very flexible and all that's needed is names for the categories as the first row and words/sentences for that category in the subsequent rows
+  - `grouper.py` generates another excel sheet called `stats.xlsx`. This file keeps track of all the occurrences for every category specified
+  in the `groupings.xlsx` file
 - Lastly, the code/package structure has been changed. Some printouts have changed as well.
 
 ## Known issues
