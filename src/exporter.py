@@ -41,11 +41,11 @@ def export_comments(ids, types, names, comments, likes, replies, key_words=None,
     writer = ExcelWriter(fname)
     df.to_excel(writer, 'Instagram Comments', index=False)
     writer.save()
-    print(f"Saving extracted data to: {os.getcwd()}/{fname}")
+    print(f"Saving extracted comments to: {os.getcwd()}/{fname}")
 
 
 def export_stats(stats):
-    fname = 'data/stats.xlsx'
+    fname = 'src/data/stats.xlsx'
     temp = {}
 
     if os.path.isfile(fname):
