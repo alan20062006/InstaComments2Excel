@@ -2,6 +2,7 @@ import os.path
 import pandas as pd
 import numpy as np
 import exporter
+
 0
 insta_df = pd.read_excel(os.getcwd() + r'/src/data/instaComments.xlsx')
 insta_df_columns = insta_df.columns.values
@@ -9,7 +10,13 @@ group_df = pd.read_excel(os.getcwd() + r'/src/data/groupings.xlsx')
 group_df.replace(r'\s+|^$', np.nan, regex=True)
 group_df_columns = group_df.columns.values
 
-print(group_df)
+stats = {}
+
+for i in range(len(group_df_columns)):
+    stats.update({group_df_columns[i]: 0})
+
+# print(groupings_counter)
+# print(group_df)
 
 c_ids = []
 c_types = []
@@ -40,8 +47,10 @@ for i_index, i_row in insta_df.iterrows():
 
                 if themes is None:
                     themes = current_column_theme
+                    stats[current_column_theme] += 1
                 elif current_column_theme not in themes:
                     themes += ", " + current_column_theme
+                    stats[current_column_theme] += 1
 
     c_ids.append(i_row['id'])
     c_types.append(i_row['type'])
@@ -52,4 +61,7 @@ for i_index, i_row in insta_df.iterrows():
     c_key_words.append(key_words)
     c_themes.append(themes)
 
-exporter.export(c_ids, c_types, c_names, c_comments, c_likes, c_replies, c_key_words, c_themes)
+print(stats)
+
+exporter.export_comments(c_ids, c_types, c_names, c_comments, c_likes, c_replies, c_key_words, c_themes)
+exporter.export_stats(stats)

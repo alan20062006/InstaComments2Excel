@@ -24,7 +24,7 @@ def start():
     close_sign_in_popup(DRIVER)
     load_all_comments(DRIVER)
     comment_iterator(DRIVER)
-    exporter.export(c_ids, c_types, c_names, c_comments, c_likes, c_replies)
+    exporter.export_comments(c_ids, c_types, c_names, c_comments, c_likes, c_replies)
     DRIVER.close()
 
 
