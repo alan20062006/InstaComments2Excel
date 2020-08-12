@@ -21,7 +21,9 @@ Extract all comments from your desired Instagram post into an excel sheet and gr
 ## Known issues
 - When trying to scrape an Instagram post that is a video, main comments do not load
   - (possible fix) Change name of the button class to match the one on the video post. (this will however reverse the problem and make it so that picture posts   will not load anymore)
-
+- In the output excel sheet, sometimes the replies will be named `['Hide', 'replies']`, 
+  this bug happens when the replies are already loaded and the script is trying to figure out how many replies there were
+  - (possible fix) Create a reply counter instead of relying on Instagram's containers with the reply amount
 
 ## Installation
 1. Clone:
