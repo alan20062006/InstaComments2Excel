@@ -44,7 +44,7 @@ def export_comments(ids, types, names, comments, likes, replies, key_words=None,
     print(f"Saving extracted comments to: {os.getcwd()}/{fname}")
 
 
-def export_stats(stats):
+def export_stats(stats, multiple_rows=False):
     fname = 'src/data/stats.xlsx'
     temp = {}
 
@@ -53,8 +53,10 @@ def export_stats(stats):
     
     for key, value in stats.items():
         temp.update({key: value})
-
-    df = pd.DataFrame(temp, index=[0])
+    if not multiple_rows:
+        df = pd.DataFrame(temp, index=[0])
+    else:
+        df = pd.DataFrame(temp)
     writer = ExcelWriter(fname)
     df.to_excel(writer, 'Instagram Comments Stats', index=False)
     writer.save()

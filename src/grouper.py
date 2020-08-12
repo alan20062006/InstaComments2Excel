@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import exporter
 
-0
+
 insta_df = pd.read_excel(os.getcwd() + r'/src/data/instaComments.xlsx')
 insta_df_columns = insta_df.columns.values
 group_df = pd.read_excel(os.getcwd() + r'/src/data/groupings.xlsx')
