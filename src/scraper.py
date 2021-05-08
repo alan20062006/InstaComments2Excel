@@ -1,9 +1,12 @@
 from selenium import webdriver
-from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.chrome.options import Options
 import time
 import sys
-import exporter
+import src.exporter as exporter
+import yaml
 
+with open(r'config.yml') as file:
+    account = yaml.full_load(file)
 
 c_ids = []
 c_types = []
@@ -32,8 +35,10 @@ def start():
 def initialize_driver(url):
     global DRIVER
     options = Options()
-    options.headless = True
-    DRIVER = webdriver.Firefox(options=options)
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    DRIVER = webdriver.Chrome(options=options)
     DRIVER.get(url)
     time.sleep(1)
 
