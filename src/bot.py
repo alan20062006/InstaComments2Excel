@@ -53,11 +53,11 @@ class InstagramBot():
         self.driver.find_element_by_xpath("//button[contains(.,'保存信息')]").click()
         time.sleep(self.wait())
 
-    def dive(self, username: str, depth=0, max_depth=0):
+    def dive(self, username: str, depth=0, max_depth=0, max_width=500):
         if depth > max_depth:
             return 
         self.get_profile(username)
-        followings = self.get_followings(username, 0)
+        followings = self.get_followings(username, max_width)
         for f in followings:
             self.dive(f"https://www.instagram.com/{f}/", depth+1, max_depth)
 
@@ -68,34 +68,35 @@ class InstagramBot():
         self.driver.get(root_url)
 
 
-    def get_followings(self, username: str, max: int):
+    def get_followings(self, username: str, max_width: int = 500):
         url = f'https://www.instagram.com/{username}/'
         self.driver.get(url)
-        import pdb;pdb.set_trace()
-        followersLink = self.driver.find_element_by_css_selector('ul li a')
+        followersLink = self.driver.find_element_by_xpath("(//a[@class='-nal3 '])[2]")
         followersLink.click()
         self.wait()
-        followersList = self.driver.find_element_by_css_selector('div[role=\'dialog\'] ul')
-        numberOfFollowersInList = len(followersList.find_elements_by_css_selector('li'))
-    
+        followersList = self.driver.find_element_by_xpath("//div[@role='dialog']")
+        num = len(followersList.find_elements_by_css_selector('li'))
+
         followersList.click()
         actionChain = webdriver.ActionChains(self.driver)
-        while (numberOfFollowersInList < max):
+        while (num < max_width):
+            import pdb;pdb.set_trace()
             actionChain.key_down(Keys.SPACE).key_up(Keys.SPACE).perform()
-            numberOfFollowersInList = len(followersList.find_elements_by_css_selector('li'))
-            print(numberOfFollowersInList)
+            num += len(followersList.find_elements_by_css_selector('li'))
+            print(num)
         
         followers = []
         for user in followersList.find_elements_by_css_selector('li'):
             userLink = user.find_element_by_css_selector('a').get_attribute('href')
             print(userLink)
-            followers.append(userLink)
-            if (len(followers) == max):
+            followers.append(userLink.split('/')[-2])
+            if (len(followers) == max_width):
                 break
+
         return followers
 
 
 if __name__ == "__main__":
     ib = InstagramBot(account)
     ib.signIn()
-    ib.dive('wefluens', 0, 0)
+    ib.dive('jacqueline.xiaowang', 0, 0, 50)
