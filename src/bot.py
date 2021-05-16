@@ -66,12 +66,6 @@ class InstagramBot():
         if privacy and not followed_by_viewer:
             raise PrivateException(f'[!] Account is private: {username}')
         return n_posts
-        
-    def preprocess_like_comment(self, input: str):
-        if input == "NaN":
-            return 0
-        else:
-            return int(input)
     
     def get_post_link(self, username) -> None:
         url = f'https://www.instagram.com/{username}/'
@@ -87,8 +81,8 @@ class InstagramBot():
                 action.move_to_element(elem).perform()
                 post_links.append(urls)
                 temp_likes, temp_comments = elem.find_element_by_class_name('qn-0x').text.split('\n')
-                n_likes.append(self.preprocess_like_comment(temp_likes))
-                n_comments.append(self.preprocess_like_comment(temp_comments))
+                n_likes.append(temp_likes)
+                n_comments.append(temp_comments)
         return post_links, n_likes, n_comments
 
     def get_profile(self, username) -> None:
@@ -213,7 +207,7 @@ class InstagramBot():
 
 
 if __name__ == "__main__":
-    root_username='dycalan'
+    root_username='nba'
     ib = InstagramBot(account)
     ib.signIn()
     # ib.dive(root_username, 0, 0, 50)
