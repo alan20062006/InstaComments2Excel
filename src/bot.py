@@ -98,7 +98,9 @@ class InstagramBot():
         self.wait(1)
         self.driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
         self.wait(1)
-        self.get_post_info(post_links)
+        print(f'[*] extracting {len(post_links)} posts jsons string, please wait...'.title())
+        new_links = [urllib.parse.urljoin(link, '?__a=1') for link in post_links]
+        post_jsons = [self.http_base.get(link.split()[0]).json() for link in new_links]
         return None
 
     def get_post_info(self, post_links) -> None:
