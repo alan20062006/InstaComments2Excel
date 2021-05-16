@@ -1,6 +1,11 @@
+from typing import List
+
 from selenium import webdriver
+import selenium
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common import action_chains
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -55,60 +60,78 @@ class InstagramBot():
         search.raise_for_status()
 
         load_and_check = search.json()
-        self.posts = load_and_check.get('graphql').get('user').get('edge_owner_to_timeline_media').get('count')
+        n_posts = load_and_check.get('graphql').get('user').get('edge_owner_to_timeline_media').get('count')
         privacy = load_and_check.get('graphql').get('user').get('is_private')
         followed_by_viewer = load_and_check.get('graphql').get('user').get('followed_by_viewer')
         if privacy and not followed_by_viewer:
             raise PrivateException(f'[!] Account is private: {username}')
+        return n_posts
+        
+    def preprocess_like_comment(self, input: str):
+        if input == "NaN":
+            return 0
+        else:
+            return int(input)
     
-    def scroll_down(self) -> None:
+    def get_post_link(self, username) -> None:
+        url = f'https://www.instagram.com/{username}/'
+        self.driver.get(url)
+        action = ActionChains(self.driver)
+        elements = self.driver.find_elements_by_xpath('//a[@href]')
+        post_links = []
+        n_likes = []
+        n_comments = []
+        for elem in elements:
+            urls = elem.get_attribute('href')
+            if 'p' in urls.split('/'):
+                action.move_to_element(elem).perform()
+                post_links.append(urls)
+                temp_likes, temp_comments = elem.find_element_by_class_name('qn-0x').text.split('\n')
+                n_likes.append(self.preprocess_like_comment(temp_likes))
+                n_comments.append(self.preprocess_like_comment(temp_comments))
+        return post_links, n_likes, n_comments
+
+    def get_profile(self, username) -> None:
         """Taking hrefs while scrolling down"""
-        while len(list(set(self.links))) < self.posts:
-            self.get_href()
-            self.wait(1)
-            self.driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
-            self.wait(1)
-        self.submit_links()
+        n_posts = self.check_availability(username)
+        post_links, n_likes, n_comments = self.get_post_link(username)
+        self.wait(1)
+        self.driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
+        self.wait(1)
+        self.get_post_info(post_links)
         return None
 
-    def submit_links(self) -> None:
+    def get_post_info(self, post_links) -> None:
         """Gathering Images and Videos and pass to function <fetch_url> Using ThreadPoolExecutor"""
-        self.control()
-        links = list(set(self.links))
 
-        print('[!] Ready for video - images'.title())
-        print(f'[*] extracting {len(links)} posts , please wait...'.title())
+        print(f'[*] extracting {len(post_links)} posts , please wait...'.title())
+        new_links = [urllib.parse.urljoin(link, '?__a=1') for link in post_links]
+        video_urls = []
+        image_urls = []
+        for link in new_links:
+            logging_page_id = self.http_base.get(link.split()[0]).json()
+            import pdb;pdb.set_trace()
+            try:
+                """Taking Gallery Photos or Videos"""
+                for log_pages in logging_page_id['graphql']['shortcode_media']['edge_sidecar_to_children']['edges']:
+                    description = log_pages['node']['accessibility_caption']
+                    video = log_pages['node']['is_video']
+                    if video:
+                        videos_url = log_pages['node']['video_url']
+                        video_urls.append(videos_url)
+                    else:
+                        images_url = log_pages['node']['display_url']
+                        image_urls.append(images_url)
 
-        new_links = [urllib.parse.urljoin(link, '?__a=1') for link in links]
-        [self.fetch_url(link) for link in new_links]
+            except KeyError:
+                """Unique photo or Video"""
+                description = logging_page_id['graphql']['shortcode_media']['accessibility_caption']
+                image_url = logging_page_id['graphql']['shortcode_media']['display_url']
+                image_urls.append(image_url)
 
-    def fetch_url(self, url: str) -> None:
-        """
-        This function extracts images and videos
-        :param url: Taking the url
-        :return None
-        """
-
-        logging_page_id = self.http_base.get(url.split()[0]).json()
-        try:
-            """Taking Gallery Photos or Videos"""
-            for log_pages in logging_page_id['graphql']['shortcode_media']['edge_sidecar_to_children']['edges']:
-                video = log_pages['node']['is_video']
-                if video:
-                    video_url = log_pages['node']['video_url']
-                    self.videos.append(video_url)
-                else:
-                    image = log_pages['node']['display_url']
-                    self.pictures.append(image)
-
-        except KeyError:
-            """Unique photo or Video"""
-            image = logging_page_id['graphql']['shortcode_media']['display_url']
-            self.pictures.append(image)
-
-            if logging_page_id['graphql']['shortcode_media']['is_video']:
-                videos = logging_page_id['graphql']['shortcode_media']['video_url']
-                self.videos.append(videos)
+                if logging_page_id['graphql']['shortcode_media']['is_video']:
+                    video_url = logging_page_id['graphql']['shortcode_media']['video_url']
+                    video_urls.append(video_url)
 
     def signIn(self):
         self.driver.get('https://www.instagram.com/accounts/login/')
@@ -128,7 +151,7 @@ class InstagramBot():
         time.sleep(self.wait())
 
         # Save Info or Not
-        self.driver.find_element_by_xpath("//button[contains(.,'Save Info')]").click()
+        self.driver.find_element_by_xpath("//button[contains(.,'保存信息')]").click()
         time.sleep(self.wait())
 
         """Check For Invalid Credentials"""
@@ -160,15 +183,6 @@ class InstagramBot():
     def filter_out(self):
         pass
 
-    def get_profile(self, username: str):
-        url = f'https://www.instagram.com/{username}/'
-        self.driver.get(url)
-        post=self.driver.find_element_by_xpath("(//li[@class='Y8-fY '])[1]").find_element_by_tag_name('span')
-        followings=self.driver.find_element_by_xpath("(//a[@class='-nal3 '])[2]").find_element_by_tag_name('span').text
-        followers=self.driver.find_element_by_xpath("(//a[@class='-nal3 '])[1]").find_element_by_tag_name('span').text
-        import pdb;pdb.set_trace()
-
-
     def get_followings(self, username: str, max_width: int = 500):
         url = f'https://www.instagram.com/{username}/'
         self.driver.get(url)
@@ -197,6 +211,8 @@ class InstagramBot():
 
 
 if __name__ == "__main__":
+    root_username='dycalan'
     ib = InstagramBot(account)
     ib.signIn()
-    ib.dive('wefluens', 0, 0, 50)
+    # ib.dive(root_username, 0, 0, 50)
+    ib.get_profile(root_username)
