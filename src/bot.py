@@ -61,11 +61,13 @@ class InstagramBot():
 
         load_and_check = search.json()
         n_posts = load_and_check.get('graphql').get('user').get('edge_owner_to_timeline_media').get('count')
+        n_followers = load_and_check.get('graphql').get('user').get('edge_followed_by').get('count')
+        n_following = load_and_check.get('graphql').get('user').get('edge_follow').get('count')
         privacy = load_and_check.get('graphql').get('user').get('is_private')
         followed_by_viewer = load_and_check.get('graphql').get('user').get('followed_by_viewer')
         if privacy and not followed_by_viewer:
             raise PrivateException(f'[!] Account is private: {username}')
-        return n_posts
+        return n_posts, n_followers, n_following
     
     def get_post_link(self, username) -> None:
         url = f'https://www.instagram.com/{username}/'
@@ -87,7 +89,8 @@ class InstagramBot():
 
     def get_profile(self, username) -> None:
         """Taking hrefs while scrolling down"""
-        n_posts = self.check_availability(username)
+        n_posts, n_followers, n_following = self.check_availability(username)
+        print(f"Analyzing account: {username} with {n_followers} followers")
         post_links, n_likes, n_comments = self.get_post_link(username)
         self.wait(1)
         self.driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
@@ -96,38 +99,6 @@ class InstagramBot():
         new_links = [urllib.parse.urljoin(link, '?__a=1') for link in post_links]
         post_jsons = [self.http_base.get(link.split()[0]).json() for link in new_links]
         return None
-
-    def get_post_info(self, post_links) -> None:
-        """Gathering Images and Videos and pass to function <fetch_url> Using ThreadPoolExecutor"""
-
-        print(f'[*] extracting {len(post_links)} posts , please wait...'.title())
-        new_links = [urllib.parse.urljoin(link, '?__a=1') for link in post_links]
-        video_urls = []
-        image_urls = []
-        for link in new_links:
-            logging_page_id = self.http_base.get(link.split()[0]).json()
-            import pdb;pdb.set_trace()
-            try:
-                """Taking Gallery Photos or Videos"""
-                for log_pages in logging_page_id['graphql']['shortcode_media']['edge_sidecar_to_children']['edges']:
-                    description = log_pages['node']['accessibility_caption']
-                    video = log_pages['node']['is_video']
-                    if video:
-                        videos_url = log_pages['node']['video_url']
-                        video_urls.append(videos_url)
-                    else:
-                        images_url = log_pages['node']['display_url']
-                        image_urls.append(images_url)
-
-            except KeyError:
-                """Unique photo or Video"""
-                description = logging_page_id['graphql']['shortcode_media']['accessibility_caption']
-                image_url = logging_page_id['graphql']['shortcode_media']['display_url']
-                image_urls.append(image_url)
-
-                if logging_page_id['graphql']['shortcode_media']['is_video']:
-                    video_url = logging_page_id['graphql']['shortcode_media']['video_url']
-                    video_urls.append(video_url)
 
     def signIn(self):
         self.driver.get('https://www.instagram.com/accounts/login/')
@@ -167,19 +138,15 @@ class InstagramBot():
     def dive(self, username: str, depth=0, max_depth=0, max_width=500):
         if depth > max_depth:
             return 
-        self.check_availability(username)
         self.get_profile(username)
-        followings = self.get_followings(username, max_width)
-        for f in followings:
+        followers = self.get_followers(username, max_width)
+        for f in followers:
             try:
-                self.dive(f"https://www.instagram.com/{f}/", depth+1, max_depth)
+                self.dive(f, depth+1, max_depth)
             except PrivateException:
                 print(PrivateException)
 
-    def filter_out(self):
-        pass
-
-    def get_followings(self, username: str, max_width: int = 500):
+    def get_followers(self, username: str, max_width: int = 500):
         url = f'https://www.instagram.com/{username}/'
         self.driver.get(url)
         followersLink = self.driver.find_element_by_xpath("(//a[@class='-nal3 '])[2]")
@@ -210,5 +177,5 @@ if __name__ == "__main__":
     root_username='nba'
     ib = InstagramBot(account)
     ib.signIn()
-    # ib.dive(root_username, 0, 0, 50)
-    ib.get_profile(root_username)
+    ib.dive(root_username, 0, 2, 50)
+    # ib.get_profile(root_username)
