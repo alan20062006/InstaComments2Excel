@@ -98,6 +98,7 @@ class InstagramBot():
         print(f'[*] extracting {len(post_links)} posts jsons string, please wait...'.title())
         new_links = [urllib.parse.urljoin(link, '?__a=1') for link in post_links]
         post_jsons = [self.http_base.get(link.split()[0]).json() for link in new_links]
+        print(f"user: {username}, followers: {n_followers}, following: {n_following},\npost_likes: {n_likes}\nn_comments{n_comments}")
         return None
 
     def signIn(self):
@@ -140,6 +141,7 @@ class InstagramBot():
             return 
         self.get_profile(username)
         followers = self.get_followers(username, max_width)
+        print(f"Got followers: \n{followers}")
         for f in followers:
             try:
                 self.dive(f, depth+1, max_depth)
@@ -160,12 +162,10 @@ class InstagramBot():
         while (num < max_width):
             actionChain.key_down(Keys.SPACE).key_up(Keys.SPACE).perform()
             num += len(followersList.find_elements_by_css_selector('li'))
-            print(num)
         
         followers = []
         for user in followersList.find_elements_by_css_selector('li'):
             userLink = user.find_element_by_css_selector('a').get_attribute('href')
-            print(userLink)
             followers.append(userLink.split('/')[-2])
             if (len(followers) == max_width):
                 break
