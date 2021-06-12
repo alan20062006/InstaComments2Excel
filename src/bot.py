@@ -1,3 +1,4 @@
+from pdb import set_trace
 from typing import List
 
 from selenium import webdriver
@@ -119,8 +120,11 @@ class InstagramBot():
         time.sleep(self.wait())
 
         # Save Info or Not
-        self.driver.find_element_by_xpath("//button[contains(.,'保存信息')]").click()
-        time.sleep(self.wait())
+        try:
+            var_error = self.driver.find_element_by_xpath("//button[contains(.,'保存信息')]").click()
+            time.sleep(self.wait())
+        except NoSuchElementException:
+            pass
 
         """Check For Invalid Credentials"""
         try:
@@ -156,12 +160,14 @@ class InstagramBot():
         self.wait()
         followersList = self.driver.find_element_by_xpath("//div[@role='dialog']")
         num = len(followersList.find_elements_by_css_selector('li'))
-
         followersList.click()
         actionChain = webdriver.ActionChains(self.driver)
         while (num < max_width):
-            actionChain.key_down(Keys.SPACE).key_up(Keys.SPACE).perform()
-            num += len(followersList.find_elements_by_css_selector('li'))
+            self.wait()
+            actionChain.key_down(Keys.SPACE).pause(self.wait(0.1,0.01)).key_up(Keys.SPACE).perform()
+            actionChain.reset_actions()
+            followersList.click()
+            num = len(followersList.find_elements_by_css_selector('li'))
         
         followers = []
         for user in followersList.find_elements_by_css_selector('li'):
@@ -177,5 +183,5 @@ if __name__ == "__main__":
     root_username='nba'
     ib = InstagramBot(account)
     ib.signIn()
-    ib.dive(root_username, 0, 2, 50)
+    ib.dive(root_username, 0, 1, 30)
     # ib.get_profile(root_username)
