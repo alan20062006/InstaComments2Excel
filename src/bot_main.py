@@ -1,5 +1,5 @@
 from pdb import set_trace
-from typing import List
+from typing import List, Tuple
 
 from selenium import webdriver
 import selenium
@@ -42,20 +42,25 @@ class InstagramBot():
 
         with open(r'filter.yml') as file:
             self.filter = yaml.full_load(file)
-    
+    '''
+    Helper function
+    '''
     def wait(self, mu = 2, sigma = 0.5):
-        # random wait time to avoid being blocked
+        # random wait time to avoid being detected
         t = random.normal(mu, sigma,1)[0]
         if t <= 0:
             return 0.1
         else:
             return t
 
-    def check_availability(self, username) -> None:
+    '''
+    Low level API
+    '''
+    def check_availability(self, username: str) -> Tuple(int, int ,int):
         """
         Checking Status code, Taking number of posts, Privacy and followed by viewer
         Raise Error if the Profile is private and not following by viewer
-        :return: None
+        return: numbers of posts/followers/followings
         """
         search = self.http_base.get(f'https://www.instagram.com/{username}/', params={'__a': 1})
         search.raise_for_status()
@@ -66,14 +71,21 @@ class InstagramBot():
         n_following = load_and_check.get('graphql').get('user').get('edge_follow').get('count')
         privacy = load_and_check.get('graphql').get('user').get('is_private')
         followed_by_viewer = load_and_check.get('graphql').get('user').get('followed_by_viewer')
+        
         if privacy and not followed_by_viewer:
             raise PrivateException(f'[!] Account is private: {username}')
         return n_posts, n_followers, n_following
-    
-    def get_post_link(self, username) -> None:
+
+    def get_post_link(self, username: str) -> Tuple(List[str], List[str], List[str]):
+        '''
+        Get the links of first 12 posts(I don't where where did I put this stupid hard coded number)
+        that contains the detailed information of the posts. Also with the numbers of likes and comments
+        of this post.
+        The numbers of likes and comments will be rounded and formated in string.
+        '''
         url = f'https://www.instagram.com/{username}/'
         self.driver.get(url)
-        action = ActionChains(self.driver)
+        action = ActionChains(self.driver) # mouse pointer driver
         elements = self.driver.find_elements_by_xpath('//a[@href]')
         post_links = []
         n_likes = []
@@ -81,8 +93,9 @@ class InstagramBot():
         for elem in elements:
             urls = elem.get_attribute('href')
             if 'p' in urls.split('/'):
-                action.move_to_element(elem).perform()
+                action.move_to_element(elem).perform() # move pointer to the post to get the likes and comments info
                 post_links.append(urls)
+                # get numbers of likes and comments
                 temp_likes, temp_comments = elem.find_element_by_class_name('qn-0x').text.split('\n')
                 n_likes.append(temp_likes)
                 n_comments.append(temp_comments)
@@ -96,12 +109,48 @@ class InstagramBot():
         self.wait(1)
         self.driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
         self.wait(1)
+        # post json string is stored in another link
         print(f'[*] extracting {len(post_links)} posts jsons string, please wait...'.title())
         new_links = [urllib.parse.urljoin(link, '?__a=1') for link in post_links]
         post_jsons = [self.http_base.get(link.split()[0]).json() for link in new_links]
+        # here you can do anything to parse the detailed info of a post
+
         print(f"user: {username}, followers: {n_followers}, following: {n_following},\npost_likes: {n_likes}\nn_comments{n_comments}")
         return None
+    
+    def get_followers(self, username: str, max_width: int = 500) -> List[str]:
+        '''
+        Get a bunch of follwers of an account
+        '''
+        url = f'https://www.instagram.com/{username}/'
+        self.driver.get(url)
+        # click on "followers" on main page
+        followersLink = self.driver.find_element_by_xpath("(//a[@class='-nal3 '])[2]")
+        followersLink.click()
+        self.wait()
+        # find the popup follower tab
+        followersList = self.driver.find_element_by_xpath("//div[@role='dialog']")
+        num = len(followersList.find_elements_by_css_selector('li'))
+        actionChain = webdriver.ActionChains(self.driver)
+        while (num < max_width):
+            followersList.click() # trick
+            self.wait()
+            actionChain.key_down(Keys.SPACE).pause(self.wait(0.1,0.01)).key_up(Keys.SPACE).perform()
+            actionChain.reset_actions()
+            num = len(followersList.find_elements_by_css_selector('li'))
+        
+        followers = []
+        for user in followersList.find_elements_by_css_selector('li'):
+            userLink = user.find_element_by_css_selector('a').get_attribute('href')
+            followers.append(userLink.split('/')[-2])
+            if (len(followers) >= max_width):
+                break
 
+        return followers
+
+    '''
+    High level API
+    '''
     def signIn(self):
         self.driver.get('https://www.instagram.com/accounts/login/')
         try:
@@ -141,6 +190,9 @@ class InstagramBot():
         self.http_base.cookies.update(cookies)
 
     def dive(self, username: str, depth=0, max_depth=0, max_width=500):
+        '''
+        Browse the TREE of an account (BFS)
+        '''
         if depth > max_depth:
             return 
         self.get_profile(username)
@@ -152,34 +204,9 @@ class InstagramBot():
             except PrivateException:
                 print(PrivateException)
 
-    def get_followers(self, username: str, max_width: int = 500):
-        url = f'https://www.instagram.com/{username}/'
-        self.driver.get(url)
-        followersLink = self.driver.find_element_by_xpath("(//a[@class='-nal3 '])[2]")
-        followersLink.click()
-        self.wait()
-        followersList = self.driver.find_element_by_xpath("//div[@role='dialog']")
-        num = len(followersList.find_elements_by_css_selector('li'))
-        followersList.click()
-        actionChain = webdriver.ActionChains(self.driver)
-        while (num < max_width):
-            self.wait()
-            actionChain.key_down(Keys.SPACE).pause(self.wait(0.1,0.01)).key_up(Keys.SPACE).perform()
-            actionChain.reset_actions()
-            followersList.click()
-            num = len(followersList.find_elements_by_css_selector('li'))
-        
-        followers = []
-        for user in followersList.find_elements_by_css_selector('li'):
-            userLink = user.find_element_by_css_selector('a').get_attribute('href')
-            followers.append(userLink.split('/')[-2])
-            if (len(followers) == max_width):
-                break
-
-        return followers
-
 
 if __name__ == "__main__":
+    # unit test
     root_username='nba'
     ib = InstagramBot(account)
     ib.signIn()
