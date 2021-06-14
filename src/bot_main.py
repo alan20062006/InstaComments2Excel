@@ -1,5 +1,5 @@
 from pdb import set_trace
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from selenium import webdriver
 import selenium
@@ -101,7 +101,7 @@ class InstagramBot():
                 n_comments.append(temp_comments)
         return post_links, n_likes, n_comments
 
-    def get_profile(self, username) -> None:
+    def get_profile(self, username) -> Dict:
         """Taking hrefs while scrolling down"""
         n_posts, n_followers, n_following = self.check_availability(username)
         print(f"Analyzing account: {username} with {n_followers} followers")
@@ -116,7 +116,14 @@ class InstagramBot():
         # here you can do anything to parse the detailed info of a post
 
         print(f"user: {username}, followers: {n_followers}, following: {n_following},\npost_likes: {n_likes}\nn_comments{n_comments}")
-        return None
+        return {
+            "username": username,           # str
+            "n_followers": n_followers,     # str
+            "n_following": n_following,     # str
+            "n_likes": n_likes,             # List of str
+            "n_comments": n_comments,       # List of str
+            "post_jsons": post_jsons,
+        }
     
     def get_followers(self, username: str, max_width: int = 500) -> List[str]:
         '''
@@ -195,7 +202,21 @@ class InstagramBot():
         '''
         if depth > max_depth:
             return 
-        self.get_profile(username)
+        user_profile = self.get_profile(username)
+        '''
+        filter starts here
+        example code:
+
+        if user_profile["n_followers"] < 10:
+            return 
+        else:
+            append_to_excel(user_profile)
+        '''
+
+        '''
+        filter ends here
+        '''
+        
         followers = self.get_followers(username, max_width)
         print(f"Got followers: \n{followers}")
         for f in followers:
