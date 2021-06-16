@@ -17,8 +17,11 @@ import urllib.parse
 import numpy.random as random
 import requests
 import yaml
+import pandas as pd
 
 from src.profile import ins_profile
+
+SAVE_FILE_NAME = 'influencer_info.csv'
 
 class PrivateException(Exception):
     pass
@@ -39,6 +42,7 @@ class InstagramBot():
 
         self.username = account['username']
         self.password = account['password']
+        self.info_list = []
 
         with open(r'filter.yml') as file:
             self.filter = yaml.full_load(file)
@@ -56,7 +60,7 @@ class InstagramBot():
     '''
     Low level API
     '''
-    def check_availability(self, username: str) -> Tuple(int, int ,int):
+    def check_availability(self, username: str) -> Tuple[int, int ,int]:
         """
         Checking Status code, Taking number of posts, Privacy and followed by viewer
         Raise Error if the Profile is private and not following by viewer
@@ -76,7 +80,7 @@ class InstagramBot():
             raise PrivateException(f'[!] Account is private: {username}')
         return n_posts, n_followers, n_following
 
-    def get_post_link(self, username: str) -> Tuple(List[str], List[str], List[str]):
+    def get_post_link(self, username: str) -> Tuple[List[str], List[str], List[str]]:
         '''
         Get the links of first 12 posts(I don't where where did I put this stupid hard coded number)
         that contains the detailed information of the posts. Also with the numbers of likes and comments
@@ -101,7 +105,7 @@ class InstagramBot():
                 n_comments.append(temp_comments)
         return post_links, n_likes, n_comments
 
-    def get_profile(self, username) -> Dict:
+    def get_profile(self, username, keep_post_jsons=True) -> Dict:
         """Taking hrefs while scrolling down"""
         n_posts, n_followers, n_following = self.check_availability(username)
         print(f"Analyzing account: {username} with {n_followers} followers")
@@ -116,14 +120,23 @@ class InstagramBot():
         # here you can do anything to parse the detailed info of a post
 
         print(f"user: {username}, followers: {n_followers}, following: {n_following},\npost_likes: {n_likes}\nn_comments{n_comments}")
-        return {
-            "username": username,           # str
-            "n_followers": n_followers,     # str
-            "n_following": n_following,     # str
-            "n_likes": n_likes,             # List of str
-            "n_comments": n_comments,       # List of str
-            "post_jsons": post_jsons,
-        }
+        if keep_post_jsons:
+            return {
+                "username": username,           # str
+                "n_followers": n_followers,     # str
+                "n_following": n_following,     # str
+                "n_likes": n_likes,             # List of str
+                "n_comments": n_comments,       # List of str
+                "post_jsons": post_jsons,
+            }
+        else:
+            return {
+                "username": username,           # str
+                "n_followers": n_followers,     # str
+                "n_following": n_following,     # str
+                "n_likes": n_likes,             # List of str
+                "n_comments": n_comments,       # List of str
+            }
     
     def get_followers(self, username: str, max_width: int = 500) -> List[str]:
         '''
@@ -196,40 +209,41 @@ class InstagramBot():
         }
         self.http_base.cookies.update(cookies)
 
-    def dive(self, username: str, depth=0, max_depth=0, max_width=500):
+    def dive(self, username: str, depth=0, max_depth=0, max_width=500, keep_post_jsons=False):
         '''
         Browse the TREE of an account (BFS)
         '''
         if depth > max_depth:
             return 
-        user_profile = self.get_profile(username)
-        '''
-        filter starts here
-        example code:
+        try:
+            user_profile = self.get_profile(username, keep_post_jsons)
+        except:
+            print(f"FAILED: got {username} profile")
 
-        if user_profile["n_followers"] < 10:
-            return 
-        else:
-            append_to_excel(user_profile)
-        '''
+        COND_FOLLOWERS = user_profile["n_followers"] > 1000 and user_profile["n_followers"] < 500000
+        COND_LIKES = True
+        COND_COMMENTS = True
 
-        '''
-        filter ends here
-        '''
-        
-        followers = self.get_followers(username, max_width)
-        print(f"Got followers: \n{followers}")
-        for f in followers:
-            try:
-                self.dive(f, depth+1, max_depth)
-            except PrivateException:
-                print(PrivateException)
+        if COND_FOLLOWERS and COND_LIKES and COND_COMMENTS: 
+            self.info_list.append(user_profile)
 
+            followers = self.get_followers(username, max_width)
+            print(f"Got followers: \n{followers}")
+            for f in followers:
+                try:
+                    self.dive(f, depth+1, max_depth)
+                except PrivateException:
+                    print(PrivateException)
+
+    def export(self, file_name=SAVE_FILE_NAME):
+        info_df = pd.DataFrame(self.info_list)
+        info_df.to_csv(file_name, index=False)
 
 if __name__ == "__main__":
     # unit test
-    root_username='nba'
+    root_username='courtneylopezgervais'
     ib = InstagramBot(account)
     ib.signIn()
-    ib.dive(root_username, 0, 1, 30)
+    ib.dive(root_username, 0, 1, 2, keep_post_jsons=False)
+    ib.export()
     # ib.get_profile(root_username)
