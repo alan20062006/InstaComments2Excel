@@ -1,4 +1,6 @@
+from os import path
 from pdb import set_trace
+import pickle
 from typing import Dict, List, Tuple
 
 from selenium import webdriver
@@ -22,6 +24,7 @@ import pandas as pd
 from src.profile import ins_profile
 
 SAVE_FILE_NAME = 'influencer_info.csv'
+cookies_path = './login.cache'
 
 class PrivateException(Exception):
     pass
@@ -35,6 +38,7 @@ class InstagramBot():
         # options.add_argument('--headless')
         # options.add_argument('--no-sandbox')
         # options.add_argument('--disable-dev-shm-usage')
+        options.add_argument("user-data-dir=selenium") 
         self.driver = webdriver.Chrome(options=options)
         self.driver.implicitly_wait(5)
 
@@ -172,41 +176,57 @@ class InstagramBot():
     High level API
     '''
     def signIn(self):
-        self.driver.get('https://www.instagram.com/accounts/login/')
-        try:
-            WebDriverWait(self.driver, 20).until(
-                EC.element_to_be_clickable((By.XPATH, "//input[@name='username']"))
-            )
-        except Exception as e:
-            traceback.print_exc()
-            print(e)
-            return
-        self.driver.find_element_by_xpath("//input[@name='username']").send_keys(self.username)
-        time.sleep(self.wait())
-        self.driver.find_element_by_xpath("//input[@name='password']").send_keys(self.password)
-        time.sleep(self.wait(mu=0.6))
-        self.driver.find_element_by_xpath("//input[@name='password']").send_keys(Keys.ENTER)
-        time.sleep(self.wait())
+        if path.exists(cookies_path):
+            print("Loading existing cookies")
+            cookies = pickle.load(open(cookies_path, "rb"))
+            # cookies = {
+            #     cookie['name']: cookie['value']
+            #     for cookie in get_cookies
+            # }
+            # for cookie in get_cookies:
+            #     self.driver.add_cookie(cookie)
 
-        # Save Info or Not
-        try:
-            var_error = self.driver.find_element_by_xpath("//button[contains(.,'保存信息')]").click()
+
+        else:
+            self.driver.get('https://www.instagram.com/accounts/login/')
+            try:
+                WebDriverWait(self.driver, 20).until(
+                    EC.element_to_be_clickable((By.XPATH, "//input[@name='username']"))
+                )
+            except Exception as e:
+                traceback.print_exc()
+                print(e)
+                return
+            self.driver.find_element_by_xpath("//input[@name='username']").send_keys(self.username)
             time.sleep(self.wait())
-        except NoSuchElementException:
-            pass
+            self.driver.find_element_by_xpath("//input[@name='password']").send_keys(self.password)
+            time.sleep(self.wait(mu=0.6))
+            self.driver.find_element_by_xpath("//input[@name='password']").send_keys(Keys.ENTER)
+            time.sleep(self.wait())
 
-        """Check For Invalid Credentials"""
-        try:
-            var_error = self.driver.find_element_by_class_name('eiCW-').text
-            raise ValueError('[!] Invalid Credentials')
-        except NoSuchElementException:
-            pass
+            # Save Info or Not
+            try:
+                var_error = self.driver.find_element_by_xpath("//button[contains(.,'保存信息')]").click()
+                time.sleep(self.wait())
+            except NoSuchElementException:
+                pass
 
-        """Taking cookies"""
-        cookies = {
-            cookie['name']: cookie['value']
-            for cookie in self.driver.get_cookies()
-        }
+            """Check For Invalid Credentials"""
+            try:
+                var_error = self.driver.find_element_by_class_name('eiCW-').text
+                raise ValueError('[!] Invalid Credentials')
+            except NoSuchElementException:
+                pass
+
+            """Taking cookies"""
+            get_cookies = self.driver.get_cookies()
+            cookies = {
+                cookie['name']: cookie['value']
+                for cookie in get_cookies
+            }
+            print(f"Generated new cookies and save it into {cookies_path}")
+            pickle.dump(cookies, open(cookies_path,"wb"))
+
         self.http_base.cookies.update(cookies)
 
     def dive(self, username: str, depth=0, max_depth=0, max_width=500, keep_post_jsons=False):
@@ -218,6 +238,7 @@ class InstagramBot():
         try:
             user_profile = self.get_profile(username, keep_post_jsons)
         except:
+            traceback.print_exc()
             print(f"FAILED: got {username} profile")
 
         COND_FOLLOWERS = user_profile["n_followers"] > 1000 and user_profile["n_followers"] < 500000
@@ -234,6 +255,8 @@ class InstagramBot():
                     self.dive(f, depth+1, max_depth)
                 except PrivateException:
                     print(PrivateException)
+                except Exception as e:
+                    print(e)
 
     def export(self, file_name=SAVE_FILE_NAME):
         info_df = pd.DataFrame(self.info_list)
