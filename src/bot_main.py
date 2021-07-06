@@ -229,7 +229,7 @@ class InstagramBot():
 
         self.http_base.cookies.update(cookies)
 
-    def dive(self, username: str, depth=0, max_depth=0, max_width=500, keep_post_jsons=False):
+    def dive(self, username: str, max_depth=0, max_width=500, keep_post_jsons=False, depth=0):
         '''
         Browse the TREE of an account (BFS)
         '''
@@ -241,32 +241,31 @@ class InstagramBot():
             traceback.print_exc()
             print(f"FAILED: got {username} profile")
 
-        COND_FOLLOWERS = user_profile["n_followers"] > 1000 and user_profile["n_followers"] < 500000
+        COND_FOLLOWERS = user_profile["n_followers"] > 2000 and user_profile["n_followers"] < 500000
         COND_LIKES = True
         COND_COMMENTS = True
 
         if COND_FOLLOWERS and COND_LIKES and COND_COMMENTS: 
             self.info_list.append(user_profile)
+            info_df = pd.DataFrame([user_profile])
+            info_df.to_csv(SAVE_FILE_NAME, mode='a', index=False)
 
             followers = self.get_followers(username, max_width)
             print(f"Got followers: \n{followers}")
             for f in followers:
                 try:
-                    self.dive(f, depth+1, max_depth)
+                    self.dive(f, max_depth, depth = depth+1)
                 except PrivateException:
                     print(PrivateException)
                 except Exception as e:
                     print(e)
-
-    def export(self, file_name=SAVE_FILE_NAME):
-        info_df = pd.DataFrame(self.info_list)
-        info_df.to_csv(file_name, index=False)
+        
 
 if __name__ == "__main__":
     # unit test
-    root_username='courtneylopezgervais'
+    root_username='beatrizcorbett'
     ib = InstagramBot(account)
     ib.signIn()
-    ib.dive(root_username, 0, 1, 2, keep_post_jsons=False)
-    ib.export()
+    ib.dive(root_username, 2, 50, keep_post_jsons=False)
+    
     # ib.get_profile(root_username)
