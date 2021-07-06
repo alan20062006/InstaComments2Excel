@@ -55,11 +55,14 @@ class InstagramBot():
     '''
     def wait(self, mu = 2, sigma = 0.5):
         # random wait time to avoid being detected
-        t = random.normal(mu, sigma,1)[0]
-        if t <= 0:
-            return 0.1
+        if sigma == 0:
+            return mu
         else:
-            return t
+            t = random.normal(mu, sigma,1)[0]
+            if t <= 0:
+                return 0.1
+            else:
+                return t
 
     '''
     Low level API
