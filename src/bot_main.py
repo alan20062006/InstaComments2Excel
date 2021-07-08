@@ -21,7 +21,7 @@ import requests
 import yaml
 import pandas as pd
 
-from src.profile import AccountProfile, profile_parser
+from src.profile import AccountProfile, profile_parser, get_post_link
 
 SAVE_FILE_NAME = 'influencer_info.csv'
 COOKIES_PATH = './login.cache'
@@ -84,67 +84,53 @@ class InstagramBot():
             raise PrivateException(f'[!] Account is private: {username}')
         return search.json()
 
-    def get_post_link(self, username: str) -> Tuple[List[str], List[str], List[str]]:
-        '''
-        Get the links of first 12 posts(I don't where where did I put this stupid hard coded number)
-        that contains the detailed information of the posts. Also with the numbers of likes and comments
-        of this post.
-        The numbers of likes and comments will be rounded and formated in string.
-        '''
-        url = f'https://www.instagram.com/{username}/'
-        self.driver.get(url)
-        action = ActionChains(self.driver) # mouse pointer driver
-        elements = self.driver.find_elements_by_xpath('//a[@href]')
-        post_links = []
-        n_likes = []
-        n_comments = []
-        for elem in elements:
-            urls = elem.get_attribute('href')
-            if 'p' in urls.split('/'):
-                action.move_to_element(elem).perform() # move pointer to the post to get the likes and comments info
-                post_links.append(urls)
-                # get numbers of likes and comments
-                temp_likes, temp_comments = elem.find_element_by_class_name('qn-0x').text.split('\n')
-                n_likes.append(temp_likes)
-                n_comments.append(temp_comments)
-        return post_links, n_likes, n_comments
+    # def get_post_link(self, username: str) -> Tuple[List[str], List[str], List[str]]:
+    #     '''
+    #     Get the links of first 12 posts(I don't where where did I put this stupid hard coded number)
+    #     that contains the detailed information of the posts. Also with the numbers of likes and comments
+    #     of this post.
+    #     The numbers of likes and comments will be rounded and formated in string.
+    #     '''
+    #     url = f'https://www.instagram.com/{username}/'
+    #     self.driver.get(url)
+    #     action = ActionChains(self.driver) # mouse pointer driver
+    #     elements = self.driver.find_elements_by_xpath('//a[@href]')
+    #     post_links = []
+    #     n_likes = []
+    #     n_comments = []
+    #     for elem in elements:
+    #         urls = elem.get_attribute('href')
+    #         if 'p' in urls.split('/'):
+    #             action.move_to_element(elem).perform() # move pointer to the post to get the likes and comments info
+    #             post_links.append(urls)
+    #             # get numbers of likes and comments
+    #             temp_likes, temp_comments = elem.find_element_by_class_name('qn-0x').text.split('\n')
+    #             n_likes.append(temp_likes)
+    #             n_comments.append(temp_comments)
+    #     return post_links, n_likes, n_comments
 
     def get_profile(self, username, keep_post_jsons=False) -> Dict:
         # Taking hrefs while scrolling down
         profile_graphql = self.check_availability(username)
         print(f"Analyzing account: {username}")
-        # post_links, n_likes, n_comments = self.get_post_link(username)
+        user_profile = profile_parser(username, profile_graphql)
         
         self.wait(1)
         self.driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
         self.wait(1)
 
-        print(f"user: {username}, followers: {n_followers}, following: {n_following},\npost_likes: {n_likes}\nn_comments{n_comments}")
         if keep_post_jsons:
             ''' TODO:
             post basic infos can be directly parsed from profile_graphql, instead of doing http requests again and again
             '''
             # post json string is stored in another link
+            post_links, n_likes, n_comments = get_post_link(username)
             print(f'[*] extracting {len(post_links)} posts jsons string, please wait...'.title())
-            new_links = [urllib.parse.urljoin(link, '?__a=1') for link in post_links]
-            post_jsons = [self.http_base.get(link.split()[0]).json() for link in new_links]
+            user_profile.new_links = [urllib.parse.urljoin(link, '?__a=1') for link in post_links]
+            user_profile.post_jsons = [self.http_base.get(link.split()[0]).json() for link in user_profile.new_links]
             # here you can do anything to parse the detailed info of a post
-            return {
-                "username": username,           # str
-                "n_followers": n_followers,     # str
-                "n_following": n_following,     # str
-                "n_likes": n_likes,             # List of str
-                "n_comments": n_comments,       # List of str
-                "post_jsons": post_jsons,
-            }
-        else:
-            return {
-                "username": username,           # str
-                "n_followers": n_followers,     # str
-                "n_following": n_following,     # str
-                "n_likes": n_likes,             # List of str
-                "n_comments": n_comments,       # List of str
-            }
+
+        return user_profile
     
     def get_followers(self, username: str, max_width: int = 500) -> List[str]:
         '''
