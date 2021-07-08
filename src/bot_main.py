@@ -231,7 +231,7 @@ class InstagramBot():
             traceback.print_exc()
             print(f"FAILED: got {username} profile")
 
-        COND_FOLLOWERS = user_profile["n_followers"] > 2000 and user_profile["n_followers"] < 500000
+        COND_FOLLOWERS = user_profile.n_followers > 2000 and user_profile.n_followers < 50000
         COND_LIKES = True
         COND_COMMENTS = True
 
@@ -249,7 +249,7 @@ class InstagramBot():
                     print(PrivateException)
                 except Exception as e:
                     print(e)
-        
+
 
 if __name__ == "__main__":
     # unit test
