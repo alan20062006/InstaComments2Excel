@@ -115,9 +115,9 @@ class InstagramBot():
         print(f"Analyzing account: {username}")
         user_profile = profile_parser(username, profile_graphql)
         
-        self.wait(1)
+        self.wait(0.5)
         self.driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
-        self.wait(1)
+        self.wait(0.5)
 
         if keep_post_jsons:
             ''' TODO:
@@ -141,7 +141,7 @@ class InstagramBot():
         # click on "followers" on main page
         followersLink = self.driver.find_element_by_xpath("(//a[@class='-nal3 '])[2]")
         followersLink.click()
-        self.wait()
+        self.wait(0.5)
         # find the popup follower tab
         followersList = self.driver.find_element_by_xpath("//div[@role='dialog']")
         num = len(followersList.find_elements_by_css_selector('li'))

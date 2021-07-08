@@ -5,9 +5,9 @@ class AccountProfile(object):
         comment_num = int
         likes = int
         url_link = str
-    followers = int
-    followings = int
-    post_num = int
+    n_followers = int
+    n_following = int
+    n_posts = int
     posts = List[post]
 
 def profile_parser(username, profile_graphql) -> AccountProfile:
