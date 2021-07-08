@@ -21,10 +21,10 @@ import requests
 import yaml
 import pandas as pd
 
-from src.profile import ins_profile
+from src.profile import AccountProfile, profile_parser
 
 SAVE_FILE_NAME = 'influencer_info.csv'
-cookies_path = './login.cache'
+COOKIES_PATH = './login.cache'
 
 class PrivateException(Exception):
     pass
@@ -67,7 +67,7 @@ class InstagramBot():
     '''
     Low level API
     '''
-    def check_availability(self, username: str) -> Tuple[int, int ,int]:
+    def check_availability(self, username: str):
         """
         Checking Status code, Taking number of posts, Privacy and followed by viewer
         Raise Error if the Profile is private and not following by viewer
@@ -77,15 +77,12 @@ class InstagramBot():
         search.raise_for_status()
 
         load_and_check = search.json()
-        n_posts = load_and_check.get('graphql').get('user').get('edge_owner_to_timeline_media').get('count')
-        n_followers = load_and_check.get('graphql').get('user').get('edge_followed_by').get('count')
-        n_following = load_and_check.get('graphql').get('user').get('edge_follow').get('count')
         privacy = load_and_check.get('graphql').get('user').get('is_private')
         followed_by_viewer = load_and_check.get('graphql').get('user').get('followed_by_viewer')
         
         if privacy and not followed_by_viewer:
             raise PrivateException(f'[!] Account is private: {username}')
-        return n_posts, n_followers, n_following
+        return search.json()
 
     def get_post_link(self, username: str) -> Tuple[List[str], List[str], List[str]]:
         '''
@@ -112,22 +109,26 @@ class InstagramBot():
                 n_comments.append(temp_comments)
         return post_links, n_likes, n_comments
 
-    def get_profile(self, username, keep_post_jsons=True) -> Dict:
-        """Taking hrefs while scrolling down"""
-        n_posts, n_followers, n_following = self.check_availability(username)
-        print(f"Analyzing account: {username} with {n_followers} followers")
-        post_links, n_likes, n_comments = self.get_post_link(username)
+    def get_profile(self, username, keep_post_jsons=False) -> Dict:
+        # Taking hrefs while scrolling down
+        profile_graphql = self.check_availability(username)
+        print(f"Analyzing account: {username}")
+        # post_links, n_likes, n_comments = self.get_post_link(username)
+        
         self.wait(1)
         self.driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
         self.wait(1)
-        # post json string is stored in another link
-        print(f'[*] extracting {len(post_links)} posts jsons string, please wait...'.title())
-        new_links = [urllib.parse.urljoin(link, '?__a=1') for link in post_links]
-        post_jsons = [self.http_base.get(link.split()[0]).json() for link in new_links]
-        # here you can do anything to parse the detailed info of a post
 
         print(f"user: {username}, followers: {n_followers}, following: {n_following},\npost_likes: {n_likes}\nn_comments{n_comments}")
         if keep_post_jsons:
+            ''' TODO:
+            post basic infos can be directly parsed from profile_graphql, instead of doing http requests again and again
+            '''
+            # post json string is stored in another link
+            print(f'[*] extracting {len(post_links)} posts jsons string, please wait...'.title())
+            new_links = [urllib.parse.urljoin(link, '?__a=1') for link in post_links]
+            post_jsons = [self.http_base.get(link.split()[0]).json() for link in new_links]
+            # here you can do anything to parse the detailed info of a post
             return {
                 "username": username,           # str
                 "n_followers": n_followers,     # str
@@ -178,10 +179,10 @@ class InstagramBot():
     '''
     High level API
     '''
-    def signIn(self):
-        if path.exists(cookies_path):
+    def sign_in(self):
+        if path.exists(COOKIES_PATH):
             print("Loading existing cookies")
-            cookies = pickle.load(open(cookies_path, "rb"))
+            cookies = pickle.load(open(COOKIES_PATH, "rb"))
             # cookies = {
             #     cookie['name']: cookie['value']
             #     for cookie in get_cookies
@@ -227,8 +228,8 @@ class InstagramBot():
                 cookie['name']: cookie['value']
                 for cookie in get_cookies
             }
-            print(f"Generated new cookies and save it into {cookies_path}")
-            pickle.dump(cookies, open(cookies_path,"wb"))
+            print(f"Generated new cookies and save it into {COOKIES_PATH}")
+            pickle.dump(cookies, open(COOKIES_PATH,"wb"))
 
         self.http_base.cookies.update(cookies)
 
@@ -268,7 +269,7 @@ if __name__ == "__main__":
     # unit test
     root_username='beatrizcorbett'
     ib = InstagramBot(account)
-    ib.signIn()
+    ib.sign_in()
     ib.dive(root_username, 2, 50, keep_post_jsons=False)
     
     # ib.get_profile(root_username)
