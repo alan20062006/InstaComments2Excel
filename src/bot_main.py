@@ -1,8 +1,10 @@
+import itertools
 from os import path
 from pdb import set_trace
 import pickle
 from typing import Dict, List, Tuple
 
+from explicit import waiter, XPATH
 from selenium import webdriver
 import selenium
 from selenium.common.exceptions import NoSuchElementException
@@ -53,6 +55,10 @@ class InstagramBot():
     '''
     Helper function
     '''
+    def sleep(self, mu = 2, sigma = 0.5):
+        time.sleep(self.wait(mu, sigma))
+        return 
+    
     def wait(self, mu = 2, sigma = 0.5):
         # random wait time to avoid being detected
         if sigma == 0:
@@ -115,9 +121,9 @@ class InstagramBot():
         print(f"Analyzing account: {username}")
         user_profile = profile_parser(username, profile_graphql)
         
-        self.wait(0.5)
+        self.sleep(0.5)
         self.driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
-        self.wait(0.5)
+        self.sleep(0.5)
 
         if keep_post_jsons:
             ''' TODO:
@@ -141,14 +147,14 @@ class InstagramBot():
         # click on "followers" on main page
         followersLink = self.driver.find_element_by_xpath("(//a[@class='-nal3 '])[2]")
         followersLink.click()
-        self.wait(0.5)
+        self.sleep(1)
         # find the popup follower tab
         followersList = self.driver.find_element_by_xpath("//div[@role='dialog']")
         num = len(followersList.find_elements_by_css_selector('li'))
         actionChain = webdriver.ActionChains(self.driver)
         while (num < max_width):
-            followersList.click() # trick
-            self.wait()
+            # followersList.click() # trick
+            self.sleep()
             actionChain.key_down(Keys.SPACE).pause(self.wait(0.1,0.01)).key_up(Keys.SPACE).perform()
             actionChain.reset_actions()
             num = len(followersList.find_elements_by_css_selector('li'))
@@ -161,6 +167,43 @@ class InstagramBot():
                 break
 
         return followers
+    def scrape_followers(self, username, max_width: int = 50):
+        # Load account page
+        self.driver.get("https://www.instagram.com/{0}/".format(username))
+
+        # Click the 'Follower(s)' link
+        # driver.find_element_by_partial_link_text("follower").click
+        self.sleep(2)
+        self.driver.find_element_by_xpath("(//a[@class='-nal3 '])[2]").click()
+
+        # Wait for the followers modal to load
+        waiter.find_element(self.driver, "//div[@role='dialog']", by=XPATH)
+        # allfoll = int(self.driver.find_element_by_xpath("//li[2]/a/span").text)
+        
+        # At this point a Followers modal pops open. If you immediately scroll to the bottom,
+        # you hit a stopping point and a "See All Suggestions" link. If you fiddle with the
+        # model by scrolling up and down, you can force it to load additional followers for
+        # that person.
+
+        # Now the modal will begin loading followers every time you scroll to the bottom.
+        # Keep scrolling in a loop until you've hit the desired number of followers.
+        # In this instance, I'm using a generator to return followers one-by-one
+        followers = []
+        follower_css = "ul div li:nth-child({}) a.notranslate"  # Taking advange of CSS's nth-child functionality
+        for group in itertools.count(start=1, step=12):
+            for follower_index in range(group, group + 12):
+                if follower_index > max_width:
+                    return followers
+                followers.append(waiter.find_element(self.driver, follower_css.format(follower_index)).text)
+
+            # Instagram loads followers 12 at a time. Find the last follower element
+            # and scroll it into view, forcing instagram to load another 12
+            # Even though we just found this elem in the previous for loop, there can
+            # potentially be large amount of time between that call and this one,
+            # and the element might have gone stale. Lets just re-acquire it to avoid
+            # tha
+            last_follower = waiter.find_element(self.driver, follower_css.format(group+11))
+            self.driver.execute_script("arguments[0].scrollIntoView();", last_follower)
 
     '''
     High level API
@@ -240,7 +283,7 @@ class InstagramBot():
             info_df = pd.DataFrame([user_profile])
             info_df.to_csv(SAVE_FILE_NAME, mode='a', index=False)
 
-            followers = self.get_followers(username, max_width)
+            followers = self.scrape_followers(username, max_width)
             print(f"Got followers: \n{followers}")
             for f in followers:
                 try:

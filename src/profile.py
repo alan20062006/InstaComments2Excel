@@ -4,16 +4,17 @@ import re
 NUM_RECENT_POSTS = 12
 
 class AccountProfile(object):
-    self.n_followers = int
-    self.n_following = int
-    self.n_posts = int
+    def __init__(self):
+        self.n_followers = 0
+        self.n_following = 0
+        self.n_posts = 0
 
-    # post fields
-    self.n_comments = List[int]
-    self.n_likes = List[int]
-    self.captions = List[str]
-    self.hashtags = List[List[str]]
-    self.url_codes = List[str]
+        # post fields
+        self.n_comments = []
+        self.n_likes = []
+        self.captions = []
+        self.hashtags = []
+        self.url_codes = []
 
 
 def profile_parser(username, profile_graphql) -> AccountProfile:
@@ -29,8 +30,11 @@ def profile_parser(username, profile_graphql) -> AccountProfile:
     for i in range(NUM_RECENT_POSTS):
         profile.n_comments.append(json_posts.get('edges')[i].get('node').get('edge_media_to_comment').get('count'))
         profile.n_likes.append(json_posts.get('edges')[i].get('node').get('edge_liked_by').get('count'))
-        profile.captions.append(json_posts.get('edges')[i].get('node').get('edge_media_to_caption').get('edges')[0].get('node').get('text'))
-        profile.hashtags.append(re.findall(r"#(\w+)", post.caption))
+        
+        caption = json_posts.get('edges')[i].get('node').get('edge_media_to_caption').get('edges')[0].get('node').get('text')
+        profile.captions.append(caption)
+        profile.hashtags.append(re.findall(r"#(\w+)", caption))
+        
         profile.url_codes.append(json_posts.get('edges')[i].get('node').get('shortcode'))
 
     print(profile)
