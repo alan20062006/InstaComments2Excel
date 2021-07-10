@@ -50,6 +50,8 @@ class InstagramBot():
         self.password = account['password']
         self.info_list = []
 
+        self.visited = set()
+
         with open(r'filter.yml') as file:
             self.filter = yaml.full_load(file)
     '''
@@ -81,6 +83,7 @@ class InstagramBot():
         """
         search = self.http_base.get(f'https://www.instagram.com/{username}/', params={'__a': 1})
         search.raise_for_status()
+        self.sleep(25)
 
         load_and_check = search.json()
         privacy = load_and_check.get('graphql').get('user').get('is_private')
@@ -138,48 +141,49 @@ class InstagramBot():
 
         return user_profile
     
-    def get_followers(self, username: str, max_width: int = 500) -> List[str]:
-        '''
-        Get a bunch of follwers of an account
-        '''
-        url = f'https://www.instagram.com/{username}/'
-        self.driver.get(url)
-        # click on "followers" on main page
-        followersLink = self.driver.find_element_by_xpath("(//a[@class='-nal3 '])[2]")
-        followersLink.click()
-        self.sleep(1)
-        # find the popup follower tab
-        followersList = self.driver.find_element_by_xpath("//div[@role='dialog']")
-        num = len(followersList.find_elements_by_css_selector('li'))
-        actionChain = webdriver.ActionChains(self.driver)
-        while (num < max_width):
-            # followersList.click() # trick
-            self.sleep()
-            actionChain.key_down(Keys.SPACE).pause(self.wait(0.1,0.01)).key_up(Keys.SPACE).perform()
-            actionChain.reset_actions()
-            num = len(followersList.find_elements_by_css_selector('li'))
+    # def get_followers(self, username: str, max_width: int = 500) -> List[str]:
+    #     '''
+    #     Get a bunch of follwers of an account
+    #     '''
+    #     url = f'https://www.instagram.com/{username}/'
+    #     self.driver.get(url)
+    #     # click on "followers" on main page
+    #     followersLink = self.driver.find_element_by_xpath("(//a[@class='-nal3 '])[2]")
+    #     followersLink.click()
+    #     self.sleep(1)
+    #     # find the popup follower tab
+    #     followersList = self.driver.find_element_by_xpath("//div[@role='dialog']")
+    #     num = len(followersList.find_elements_by_css_selector('li'))
+    #     actionChain = webdriver.ActionChains(self.driver)
+    #     while (num < max_width):
+    #         # followersList.click() # trick
+    #         self.sleep()
+    #         actionChain.key_down(Keys.SPACE).pause(self.wait(0.1,0.01)).key_up(Keys.SPACE).perform()
+    #         actionChain.reset_actions()
+    #         num = len(followersList.find_elements_by_css_selector('li'))
         
-        followers = []
-        for user in followersList.find_elements_by_css_selector('li'):
-            userLink = user.find_element_by_css_selector('a').get_attribute('href')
-            followers.append(userLink.split('/')[-2])
-            if (len(followers) >= max_width):
-                break
+    #     followers = []
+    #     for user in followersList.find_elements_by_css_selector('li'):
+    #         userLink = user.find_element_by_css_selector('a').get_attribute('href')
+    #         followers.append(userLink.split('/')[-2])
+    #         if (len(followers) >= max_width):
+    #             break
 
-        return followers
+    #     return followers
+    
     def scrape_followers(self, username, max_width: int = 50):
         # Load account page
         self.driver.get("https://www.instagram.com/{0}/".format(username))
 
         # Click the 'Follower(s)' link
         # driver.find_element_by_partial_link_text("follower").click
-        self.sleep(2)
+        self.sleep(25)
         self.driver.find_element_by_xpath("(//a[@class='-nal3 '])[2]").click()
 
         # Wait for the followers modal to load
         waiter.find_element(self.driver, "//div[@role='dialog']", by=XPATH)
         # allfoll = int(self.driver.find_element_by_xpath("//li[2]/a/span").text)
-        
+
         # At this point a Followers modal pops open. If you immediately scroll to the bottom,
         # you hit a stopping point and a "See All Suggestions" link. If you fiddle with the
         # model by scrolling up and down, you can force it to load additional followers for
@@ -268,37 +272,48 @@ class InstagramBot():
         '''
         if depth > max_depth:
             return 
+        
+        if depth == 0:
+            self.visited = set()
+        elif username in self.visited:
+            return
+
         try:
             user_profile = self.get_profile(username, keep_post_jsons)
+            self.visited.add(username)
         except:
             traceback.print_exc()
             print(f"FAILED: got {username} profile")
 
-        COND_FOLLOWERS = user_profile.n_followers > 2000 and user_profile.n_followers < 50000
+        COND_FOLLOWERS = user_profile.n_followers > 2000 and user_profile.n_followers < 100000
         COND_LIKES = True
         COND_COMMENTS = True
 
         if COND_FOLLOWERS and COND_LIKES and COND_COMMENTS: 
             self.info_list.append(user_profile)
-            info_df = pd.DataFrame([user_profile])
-            info_df.to_csv(SAVE_FILE_NAME, mode='a', index=False)
+            info_df = pd.DataFrame([vars(user_profile)])
+            # save to csv file
+            with open(SAVE_FILE_NAME, 'a') as f:
+                info_df.to_csv(f, mode='a', index=False, header=f.tell()==0)
 
             followers = self.scrape_followers(username, max_width)
             print(f"Got followers: \n{followers}")
             for f in followers:
                 try:
-                    self.dive(f, max_depth, depth = depth+1)
+                    self.dive(f, max_depth, max_width, keep_post_jsons=keep_post_jsons,depth = depth+1)
                 except PrivateException:
                     print(PrivateException)
                 except Exception as e:
                     print(e)
+        else:
+            print(f"BYPASS: account {username} condition not met")
 
 
 if __name__ == "__main__":
     # unit test
-    root_username='beatrizcorbett'
+    root_username='laurensoyung'
     ib = InstagramBot(account)
     ib.sign_in()
-    ib.dive(root_username, 2, 50, keep_post_jsons=False)
+    ib.dive(root_username, 2, 40, keep_post_jsons=False)
     
     # ib.get_profile(root_username)
